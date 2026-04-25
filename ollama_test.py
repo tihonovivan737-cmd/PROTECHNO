@@ -2,9 +2,19 @@ from abc import ABC, abstractmethod
 import requests
 import re
 from pathlib import Path
+from types import ModuleType
 from typing import Iterable
 import csv
 
+import profile_youth_center
+import profile_volunteers
+
+# Реестр доступных профилей площадок (системный промпт + few-shot пример).
+PROFILES: dict[str, ModuleType] = {
+    profile_youth_center.NAME: profile_youth_center,
+    profile_volunteers.NAME: profile_volunteers,
+}
+DEFAULT_PROFILE = profile_youth_center.NAME
 class BaseLLMClient(ABC):
 
     @abstractmethod
@@ -70,50 +80,69 @@ class CSVExampleStore(BaseExampleStore):
         return sorted(filtered, key=lambda r: r["likes"], reverse=True)[:n]
 
 class PromptBuilder(BasePromptBuilder):
-    EXAMPLE_INPUT = "Открытие пространства Молодёжного центра «Своё дело» на Попова, 12"
-    EXAMPLE_OUTPUT = (
-        "Мы находимся на Попова, 12, чтобы каждый смог найти дело по душе — "
-        "развил свои навыки в медиасфере, научился танцевать, разработал новый "
-        "тренинг или проект, стал частью большой команды интеллектуальных или "
-        "настольных игр, вышел на поле в Летней или Зимней дворовой футбольной "
-        "лиге, вступил в Ассоциацию работающей молодежи, прошел первый инструктаж "
-        "в Трудовом отряде Главы города Красноярска и получил первый опыт "
-        "официальной работы, и просто делал то, что любит…\n\n"
-        "Смотри на наши помещения во вкладке «Товары», выбирай любое из них для "
-        "бронирования и заполняй инициативную заявку — это бесплатно!\n\n"
-        "Главное, что все дороги ведут в #мцсвоедело!"
-    )
+    """Собирает chat-messages для LLM на основе выбранного профиля площадки.
 
-    SYSTEM = (
-        "Ты — SMM-редактор молодёжного медиасообщества «Своё дело» (Красноярск).\n"
-        "Из краткого описания события делаешь готовый пост для соцсетей.\n\n"
-        "СТИЛЬ:\n"
-        "- Дружелюбный, тёплый, вдохновляющий, без канцелярита и пафоса.\n"
-        "- Обращение на «ты», как к ровеснику.\n"
-        "- Живые перечисления через тире, длинные предложения допустимы.\n"
-        "- Уместные эмодзи (1–4 на пост), без перебора.\n"
-        "- Тон — как в примерах ниже.\n\n"
-        "СТРУКТУРА:\n"
-        "1) Цепляющий первый абзац — суть и атмосфера события.\n"
-        "2) Конкретика: что будет / что можно сделать / для кого.\n"
-        "3) Призыв к действию (как поучаствовать, куда писать, что нажать).\n"
-        "4) Финальная строка с хэштегом #мцсвоедело и 1–2 доп. хэштегами.\n\n"
-        "ПРАВИЛА:\n"
-        "- Примеры задают СТИЛЬ. Факты бери ТОЛЬКО из текущего описания.\n"
-        "- НЕ выдумывай факты, даты, имена, адреса, цены.\n"
-        "- Если данных мало — пиши обобщённо, без конкретики.\n"
-        "- Длина: 80–180 слов.\n"
-        "- Никаких пояснений и markdown — только текст поста."
-    )
+    Профиль (см. `profile_youth_center.py`, `profile_volunteers.py`)
+    задаёт системный промпт и пример входа/выхода для few-shot.
+    """
+
+    def __init__(self, profile: ModuleType | str | None = None):
+        if profile is None:
+            profile = DEFAULT_PROFILE
+        if isinstance(profile, str):
+            if profile not in PROFILES:
+                raise ValueError(
+                    f"Неизвестный профиль: {profile!r}. "
+                    f"Доступные: {sorted(PROFILES)}"
+                )
+            profile = PROFILES[profile]
+        self.profile = profile
+
+    @property
+    def EXAMPLE_INPUT(self) -> str:
+        return self.profile.EXAMPLE_INPUT
+
+    @property
+    def EXAMPLE_OUTPUT(self) -> str:
+        return self.profile.EXAMPLE_OUTPUT
+
+    @property
+    def SYSTEM(self) -> str:
+        return self.profile.SYSTEM
+
+    # Модификаторы тона в зависимости от состояния сообщества (см. condition.py)
+    STATE_MODIFIERS = {
+        "CRISIS": (            "\n\nТЕКУЩЕЕ СОСТОЯНИЕ СООБЩЕСТВА: CRISIS (вовлечённость низкая).\n"
+            "- Тон сдержанный, спокойный, уважительный, без громких призывов и восклицаний.\n"
+            "- Минимум эмодзи (0–1), без капса, без агрессивного маркетинга.\n"
+            "- Делай акцент на пользе, заботе и поддержке аудитории.\n"
+            "- Призыв к действию мягкий, ненавязчивый."
+        ),
+        "NORMAL": (
+            "\n\nТЕКУЩЕЕ СОСТОЯНИЕ СООБЩЕСТВА: NORMAL (вовлечённость стабильная).\n"
+            "- Тон обычный — дружелюбный и тёплый, как в базовом стиле.\n"
+            "- Эмодзи 1–3, призыв к действию уверенный, но не давящий."
+        ),
+        "RISE": (
+            "\n\nТЕКУЩЕЕ СОСТОЯНИЕ СООБЩЕСТВА: RISE (вовлечённость растёт).\n"
+            "- Тон активный, энергичный, праздничный — лови волну.\n"
+            "- Эмодзи 2–4, можно яркие сравнения и эмоциональные акценты.\n"
+            "- Призыв к действию громкий и заметный, подталкивай делиться и звать друзей."
+        ),
+    }
+
+    def system_for_state(self, state: str | None) -> str:
+        if not state:
+            return self.SYSTEM
+        modifier = self.STATE_MODIFIERS.get(state.upper())
+        return self.SYSTEM + modifier if modifier else self.SYSTEM
 
     @staticmethod
     def _brief_from_post(post_text: str, max_len: int = 120) -> str:
         first = re.split(r"(?<=[.!?…])\s", post_text, maxsplit=1)[0]
         return (first[:max_len] + "…") if len(first) > max_len else first
-
-    def build_prompt(self, query: str, shots: Iterable[dict] = ()) -> list[dict]:
-        messages = [{"role": "system", "content": self.SYSTEM}]
-
+    def build_prompt(self, query: str, shots: Iterable[dict] = (), state: str | None = None) -> list[dict]:
+        messages = [{"role": "system", "content": self.system_for_state(state)}]
         messages.append({"role": "user", "content": f"Описание события:\n{self.EXAMPLE_INPUT}"})
         messages.append({"role": "assistant", "content": self.EXAMPLE_OUTPUT})
 
@@ -161,6 +190,26 @@ CSV_PATH = Path("posts.csv")
 N_SHOTS = 3
 QUERY = "Событие Росмолодёжи на острове Татышев"
 
+def generate_post_text(
+    query: str,
+    state: str | None = None,
+    profile: ModuleType | str | None = None,
+) -> str:
+    """Генерирует текст поста по описанию события через Ollama.
+
+    `state` — текущее состояние сообщества: "CRISIS" / "NORMAL" / "RISE".
+        Если задано, в системный промпт добавляется соответствующий модификатор тона.
+    `profile` — имя профиля площадки (см. `PROFILES`) или сам модуль профиля.
+        По умолчанию используется `DEFAULT_PROFILE` (молодёжный центр).
+    """
+    store = CSVExampleStore(CSV_PATH)
+    shots = store.top_by_likes(n=N_SHOTS, min_len=200, max_len=1500)
+
+    builder = PromptBuilder(profile=profile)
+    client = OllamaClient(url=OLLAMA_URL, model=MODEL)
+
+    messages = builder.build_prompt(query, shots, state=state)
+    return client.generate(messages)
 def main() -> None:
     store = CSVExampleStore(CSV_PATH)
     shots = store.top_by_likes(n=N_SHOTS, min_len=200, max_len=1500)
