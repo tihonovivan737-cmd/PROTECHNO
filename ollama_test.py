@@ -161,6 +161,26 @@ CSV_PATH = Path("posts.csv")
 N_SHOTS = 3
 QUERY = "Событие Росмолодёжи на острове Татышев"
 
+
+def generate_post_text(query: str,
+                       csv_path: Path = CSV_PATH,
+                       n_shots: int = N_SHOTS,
+                       ollama_url: str = OLLAMA_URL,
+                       model: str = MODEL) -> str:
+    shots: list[dict] = []
+    try:
+        shots = CSVExampleStore(csv_path).top_by_likes(
+            n=n_shots, min_len=200, max_len=1500,
+        )
+    except FileNotFoundError:
+        pass  
+
+    builder = PromptBuilder()
+    client = OllamaClient(url=ollama_url, model=model)
+    messages = builder.build_prompt(query, shots)
+    return client.generate(messages)
+
+
 def main() -> None:
     store = CSVExampleStore(CSV_PATH)
     shots = store.top_by_likes(n=N_SHOTS, min_len=200, max_len=1500)
