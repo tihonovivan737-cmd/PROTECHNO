@@ -5,8 +5,6 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-# Грузим .env, лежащий рядом с этим файлом — независимо от cwd.
-# override=True — значения из .env побеждают пустые/устаревшие переменные окружения.
 _ENV_PATH = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=_ENV_PATH, override=True)
 
