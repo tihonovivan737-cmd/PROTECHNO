@@ -1,12 +1,16 @@
-import requests
-import time
-from dotenv import load_dotenv
 import os
+import time
+from pathlib import Path
 
-load_dotenv()
+import requests
+from dotenv import load_dotenv
+
+# Грузим .env, лежащий рядом с этим файлом — независимо от cwd.
+# override=True — значения из .env побеждают пустые/устаревшие переменные окружения.
+_ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=_ENV_PATH, override=True)
 
 API_VERSION = "5.199"
-
 
 def _vk_config() -> tuple[str, str, int]:
     """Достаёт настройки VK из окружения. Падает осмысленно, если чего-то нет."""
@@ -30,7 +34,7 @@ def create_post(message: str, attachments: str | None = None, from_group: bool =
     :param from_group: True — пост от имени сообщества
     :return: ID опубликованного поста или None при ошибке
     """
-    
+
     token, api_url, group_id = _vk_config()
 
     params = {
