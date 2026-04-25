@@ -19,11 +19,13 @@ def parse_wall(payload: ParsePostsRequest) -> ParsePostsResponse:
             url=payload.url,
             max_posts=payload.max_posts,
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except service.InvalidVKUrlError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     except service.VKAPIError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
-
     parsed = [service.parse_post(p) for p in raw]
     return ParsePostsResponse(
         domain=domain_label,
