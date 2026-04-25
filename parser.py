@@ -2,20 +2,24 @@ import requests
 import csv
 import time
 from datetime import datetime
+from dotenv import load_dotenv
 
-ACCESS_TOKEN = "vk1.a.QhPc8KVE4BUXd7vGk5YCOY240aLsuJEK7HADb6OyOBiUbhvP8bN6RIMkdTGiLOC4x1l17HyZJVO_zJm8yC7YgChAe92wRGqjGrxyBt1ZMUatdJej2Nu_3LOoCbUlnhcip2tyi3A6eQbPa-wViKWbVy81fzLpJtoMGct7suNQc-jO4b_lBhVNJuhzK6iMQS2CfHoumAAhUjxLQoiXZzKU1Q"
+load_dotenv()
+
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 
 GROUP_DOMAIN = "svoedelomc"
 OUTPUT_FILE = "posts.csv"
 
 API_VERSION = "5.199"
-API_URL = "https://api.vk.com/method/wall.get"
+API_URL_GET = os.getenv("VK_API_URL_GET")
 COUNT_PER_REQUEST = 10
 MAX_POSTS = 10
 
 
 def fetch_posts(domain, token):
     """Получает все посты со стены паблика через VK API."""
+
     all_posts = []
     offset = 0
 
@@ -67,6 +71,7 @@ def fetch_posts(domain, token):
 
 def parse_post(post):
     """Извлекает нужные поля из поста."""
+
     dt = datetime.fromtimestamp(post.get("date", 0)).strftime("%Y-%m-%d %H:%M:%S")
     text = post.get("text", "").replace("\n", " ").replace(";", ",")
     return {
@@ -82,6 +87,7 @@ def parse_post(post):
 
 def save_to_csv(posts, filename):
     """Сохраняет посты в CSV-файл."""
+    
     if not posts:
         print("Нет постов для сохранения.")
         return
