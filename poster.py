@@ -1,40 +1,54 @@
-import requests
+import os
 import time
+from pathlib import Path
+
+import requests
 from dotenv import load_dotenv
 
-load_dotenv()
+_ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=_ENV_PATH, override=True)
 
-ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
-
-GROUP_ID = int(os.getenv("GROUP_ID"))
 API_VERSION = "5.199"
-API_URL = os.getenv("VK_API_URL_POST")
+
+def _vk_config() -> tuple[str, str, int]:
+    """Достаёт настройки VK из окружения. Падает осмысленно, если чего-то нет."""
+
+    token = os.getenv("ACCESS_TOKEN")
+    api_url = os.getenv("VK_API_URL_POST")
+    group_id = os.getenv("GROUP_ID")
+    if not token or not api_url or not group_id:
+        raise RuntimeError(
+            "Не заданы переменные окружения: ACCESS_TOKEN / VK_API_URL_POST / GROUP_ID"
+        )
+    return token, api_url, int(group_id)
 
 
-def create_post(message, attachments=None, from_group=True):
+def create_post(message: str, attachments: str | None = None, from_group: bool = True) -> int | None:
     """
     Публикует пост на стену сообщества.
 
     :param message: Текст поста
-    :param attachments: Вложения (фото, видео и т.д.) в формате VK, например "photo123_456"
-    :param from_group: True — пост от имени сообщества, False — от имени пользователя
+    :param attachments: Вложения VK, например "photo123_456"
+    :param from_group: True — пост от имени сообщества
     :return: ID опубликованного поста или None при ошибке
     """
 
+    token, api_url, group_id = _vk_config()
+
     params = {
-        "owner_id": -GROUP_ID,
+        "owner_id": -group_id,
         "from_group": int(from_group),
         "message": message,
         "v": API_VERSION,
-        "access_token": ACCESS_TOKEN,
+        "access_token": token,
     }
-
     if attachments:
         params["attachments"] = attachments
 
+    data = None
     for attempt in range(5):
         try:
-            resp = requests.post(API_URL, data=params, timeout=15)
+            resp = requests.post(api_url, data=params, timeout=15)
             data = resp.json()
             break
         except (requests.exceptions.RequestException, ValueError) as e:
@@ -50,7 +64,7 @@ def create_post(message, attachments=None, from_group=True):
 
     post_id = data["response"]["post_id"]
     print(f"Пост опубликован! ID: {post_id}")
-    print(f"Ссылка: https://vk.com/wall-{GROUP_ID}_{post_id}")
+    print(f"Ссылка: https://vk.com/wall-{group_id}_{post_id}")
     return post_id
 
 
@@ -59,9 +73,7 @@ def main():
     if not message:
         print("Текст поста не может быть пустым.")
         return
-
     attachments = input("Вложения (оставьте пустым, если нет): ").strip() or None
-
     create_post(message, attachments=attachments)
 
 
