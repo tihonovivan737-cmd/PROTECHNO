@@ -5,10 +5,13 @@ from backend.app.config import settings
 from backend.modules.llm.clients import LLMError, OllamaClient
 from backend.modules.llm.example_store import CSVExampleStore
 from backend.modules.llm.prompt_builder import PromptBuilder
+from backend.modules.profiles.registry import Profile, get_profile
 
 
 def generate_post_text(
     query: str,
+    profile_name: Optional[str] = None,
+    state: Optional[str] = None,
     n_shots: Optional[int] = None,
     model: Optional[str] = None,
     csv_path: Optional[Path] = None,
@@ -22,6 +25,10 @@ def generate_post_text(
     n_shots = settings.LLM_N_SHOTS if n_shots is None else n_shots
     model_name = model or settings.OLLAMA_MODEL
     examples_path = csv_path or settings.llm_examples_csv_abs
+
+    profile: Optional[Profile] = None
+    if profile_name:
+        profile = get_profile(profile_name)
 
     shots: list[dict] = []
     if n_shots > 0:
@@ -40,7 +47,7 @@ def generate_post_text(
         model=model_name,
         timeout=settings.OLLAMA_TIMEOUT,
     )
-    messages = builder.build_prompt(query, shots)
+    messages = builder.build_prompt(query, shots, profile=profile, state=state)
     text = client.generate(messages)
     return text, model_name, len(shots)
 
