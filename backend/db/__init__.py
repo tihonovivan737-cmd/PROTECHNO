@@ -1,11 +1,4 @@
-﻿"Пакет моделей БД.
-
-Импорт всех моделей здесь нужен, чтобы:
-- relationship по строковым именам корректно резолвились;
-- Alembic / Base.metadata видели все таблицы.
-"
-
-from backend.db.base import Base, TimestampMixin
+﻿from backend.db.base import Base, TimestampMixin
 from backend.db.database import engine, async_session_maker, get_db
 from backend.db.enums import (
     UserRole,
