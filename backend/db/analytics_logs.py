@@ -1,22 +1,28 @@
-import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import (
-    String, Text, Integer, DateTime, ForeignKey, Enum
-)
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
+from sqlalchemy import Integer, DateTime, ForeignKey, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from backend.db.base import Base
+
 
 class AnalyticsLog(Base):
     __tablename__ = "analytics_log"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
 
-    post_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("posts.id"))
+    post_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("posts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
-    collected_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    collected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    likes: Mapped[int]
-    comments: Mapped[int]
-    views: Mapped[int]
+    likes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    comments: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    views: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

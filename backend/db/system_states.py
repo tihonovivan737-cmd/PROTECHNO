@@ -1,20 +1,26 @@
-import enum
 import uuid
-from datetime import datetime
 
-from sqlalchemy import (
-    String, Text, Integer, DateTime, ForeignKey, Enum
-)
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
+from sqlalchemy import ForeignKey, Enum
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
 
-class SystemState(Base):
+from backend.db.base import Base, TimestampMixin
+from backend.db.enums import SystemStateEnum
+
+
+class SystemState(Base, TimestampMixin):
     __tablename__ = "system_state"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
 
-    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), unique=True)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
 
-    current_state: Mapped[SystemStateEnum] = mapped_column(Enum(SystemStateEnum))
-
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    current_state: Mapped[SystemStateEnum] = mapped_column(
+        Enum(SystemStateEnum), nullable=False
+    )
