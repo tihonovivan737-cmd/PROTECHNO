@@ -1,5 +1,5 @@
-from ollama_test import generate_post_text
-from poster import create_post
+from backend.modules.llm.service import generate_post_text, LLMError
+from backend.modules.vk.service import VKAPIError, create_post, post_url
 
 
 def main() -> None:
@@ -9,13 +9,18 @@ def main() -> None:
         return
 
     print("\nГенерирую текст поста через LLM...\n")
-    text = generate_post_text(query)
+    try:
+        text, model, shots = generate_post_text(query)
+    except LLMError as e:
+        print(f"LLM error: {e}")
+        return
 
     print("=" * 60)
     print(text)
     print("=" * 60)
+    print(f"(model={model}, shots={shots})")
 
-    if not text or text.startswith("LLM error:"):
+    if not text:
         print("Текст не получен — публикация отменена.")
         return
 
@@ -25,7 +30,14 @@ def main() -> None:
         return
 
     attachments = input("Вложения (опц., например photo123_456): ").strip() or None
-    create_post(text, attachments=attachments)
+    try:
+        post_id = create_post(text, attachments=attachments)
+    except VKAPIError as e:
+        print(f"Ошибка публикации: {e}")
+        return
+
+    print(f"Пост опубликован! ID: {post_id}")
+    print(f"Ссылка: {post_url(post_id)}")
 
 
 if __name__ == "__main__":
