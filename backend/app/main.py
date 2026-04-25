@@ -3,6 +3,8 @@ import uvicorn
 from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from backend.db.database import engine, AsyncSession, get_db
+from backend.modules.vk import router as vk_router
+from backend.modules.llm import router as llm_router
 
 
 @asynccontextmanager
@@ -15,6 +17,9 @@ app = FastAPI( title="Безумный MAX",
                version="1.0.0",
                lifespan=lifespan 
              )
+
+app.include_router(vk_router)
+app.include_router(llm_router)
 
 
 @app.get("/")
@@ -29,7 +34,7 @@ async def health_db(db: AsyncSession = Depends(get_db)):
 
 if __name__ == "__main__":
     uvicorn.run(
-        "app.main:app",
+        "backend.app.main:app",
         host="127.0.0.1",
         port=8000,
         reload=True
