@@ -1,18 +1,19 @@
-import enum 
+import enum
 
-class UserRole(enum.Enum):
+
+class UserRole(str, enum.Enum):
     admin = "admin"
     editor = "editor"
     viewer = "viewer"
 
 
-class OrgType(enum.Enum):
+class OrgType(str, enum.Enum):
     university = "university"
     volunteer = "volunteer"
     youth_center = "youth_center"
 
 
-class PostType(enum.Enum):
+class PostType(str, enum.Enum):
     event_announcement = "event_announcement"
     event_result = "event_result"
     vacancy = "vacancy"
@@ -22,28 +23,28 @@ class PostType(enum.Enum):
     other = "other"
 
 
-class PostStatus(enum.Enum):
+class PostStatus(str, enum.Enum):
     draft = "draft"
     scheduled = "scheduled"
     published = "published"
 
 
-class ModuleType(enum.Enum):
+class ModuleType(str, enum.Enum):
     events = "events"
     volunteer = "volunteer"
 
 
-class Platform(enum.Enum):
+class Platform(str, enum.Enum):
     vk = "vk"
     telegram = "telegram"
 
 
-class EventSource(enum.Enum):
+class EventSource(str, enum.Enum):
     google_calendar = "google_calendar"
     manual = "manual"
 
 
-class SystemStateEnum(enum.Enum):
+class SystemStateEnum(str, enum.Enum):
     normal = "normal"
     growth = "growth"
     crisis = "crisis"
