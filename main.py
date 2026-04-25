@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import csv
 import os
 from pathlib import Path
@@ -81,10 +82,19 @@ def main() -> None:
         print("Неверный выбор.")
         return
 
+=======
+from backend.modules.llm.service import generate_post_text, LLMError
+from backend.modules.vk.service import VKAPIError, create_post, post_url
+
+
+def main() -> None:
+    query = input("Опиши событие одной фразой: ").strip()
+>>>>>>> 91e5689333a409e238139bceff41d8d3aa4de8df
     if not query:
         print("Пустое описание — выходим.")
         return
 
+<<<<<<< HEAD
     condition = assess_condition()
     print(
         f"\nСостояние сообщества: {condition.state} "
@@ -100,6 +110,21 @@ def main() -> None:
     print(text)
     print("=" * 60)
     if not text or text.startswith("LLM error:"):
+=======
+    print("\nГенерирую текст поста через LLM...\n")
+    try:
+        text, model, shots = generate_post_text(query)
+    except LLMError as e:
+        print(f"LLM error: {e}")
+        return
+
+    print("=" * 60)
+    print(text)
+    print("=" * 60)
+    print(f"(model={model}, shots={shots})")
+
+    if not text:
+>>>>>>> 91e5689333a409e238139bceff41d8d3aa4de8df
         print("Текст не получен — публикация отменена.")
         return
 
@@ -108,12 +133,24 @@ def main() -> None:
         print("Отменено.")
         return
 
+<<<<<<< HEAD
     attachments = input("Вложения (опц., например photo123_456 или URL, несколько через запятую): ").strip() or None
     try:
         create_post(text, attachments=attachments)
     except RuntimeError as e:
         print(f"Ошибка публикации: {e}")
         print("Убедитесь, что в .env заданы ACCESS_TOKEN, GROUP_ID и VK_API_URL_POST.")
+=======
+    attachments = input("Вложения (опц., например photo123_456): ").strip() or None
+    try:
+        post_id = create_post(text, attachments=attachments)
+    except VKAPIError as e:
+        print(f"Ошибка публикации: {e}")
+        return
+
+    print(f"Пост опубликован! ID: {post_id}")
+    print(f"Ссылка: {post_url(post_id)}")
+>>>>>>> 91e5689333a409e238139bceff41d8d3aa4de8df
 
 
 if __name__ == "__main__":

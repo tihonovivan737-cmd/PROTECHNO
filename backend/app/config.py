@@ -28,6 +28,21 @@ class Settings(BaseSettings):
 
     EVENTS_OUTPUT_FILE: Path = Field(default=Path("events.csv"))
 
+    # VK parser
+    VK_PARSER_GROUP_DOMAIN: str = "svoedelomc"
+    VK_PARSER_OUTPUT_FILE: Path = Field(default=Path("posts.csv"))
+    VK_PARSER_COUNT_PER_REQUEST: int = 10
+    VK_PARSER_MAX_POSTS: int = 10
+
+    # Ollama / LLM
+    OLLAMA_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "qwen2.5:3b"
+    OLLAMA_TIMEOUT: int = 120
+    LLM_EXAMPLES_CSV: Path = Field(default=Path("posts.csv"))
+    LLM_N_SHOTS: int = 3
+    LLM_SHOT_MIN_LEN: int = 200
+    LLM_SHOT_MAX_LEN: int = 1500
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
         env_file_encoding="utf-8",
@@ -69,5 +84,16 @@ class Settings(BaseSettings):
         path = self.EVENTS_OUTPUT_FILE
         return path if path.is_absolute() else PROJECT_ROOT / path
 
+    @property
+    def vk_parser_output_abs(self) -> Path:
+        """Абсолютный путь к CSV с выгрузкой постов VK."""
+        path = self.VK_PARSER_OUTPUT_FILE
+        return path if path.is_absolute() else PROJECT_ROOT / path
+
+    @property
+    def llm_examples_csv_abs(self) -> Path:
+        """Абсолютный путь к CSV с примерами для few-shot."""
+        path = self.LLM_EXAMPLES_CSV
+        return path if path.is_absolute() else PROJECT_ROOT / path
 
 settings = Settings()
