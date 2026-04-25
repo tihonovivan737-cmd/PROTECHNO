@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI, Depends
 from sqlalchemy import text
+from backend.db.database import engine, AsyncSession, get_db
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,6 +20,12 @@ app = FastAPI( title="Безумный MAX",
 @app.get("/")
 async def root():
     return {"message": "Backend is running"}
+
+@app.get("/health/db")
+async def health_db(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(text("SELECT 1"))
+    return { "status": "ok", "db_response": result.scalar() }
+
 
 if __name__ == "__main__":
     uvicorn.run(
