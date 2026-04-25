@@ -8,18 +8,21 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
-class Organization(Base):
-    __tablename__ = "organizations"
+
+class User(Base):
+    __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     name: Mapped[str] = mapped_column(String(255))
-    type: Mapped[OrgType] = mapped_column(Enum(OrgType))
-    description: Mapped[str] = mapped_column(Text, nullable=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole))
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
 
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
-    users = relationship("User", back_populates="organization")
-    posts = relationship("Post", back_populates="organization")
-    events = relationship("Event", back_populates="organization")
-    
+    organization = relationship("Organization", back_populates="users")
+    posts = relationship("Post", back_populates="author")
