@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, status
 
 from backend.modules.vk import service
 from backend.schemas.vk import (
     CreatePostRequest,
     CreatePostResponse,
+    DeletePostRequest,
+    DeletePostResponse,
     ParsePostsRequest,
     ParsePostsResponse,
     ParsedPost,
 )
-
 router = APIRouter(prefix="/api/vk", tags=["vk"])
 
 
@@ -50,3 +51,25 @@ def create_post(payload: CreatePostRequest) -> CreatePostResponse:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
 
     return CreatePostResponse(post_id=post_id, url=service.post_url(post_id))
+
+
+@router.post("/delete", response_model=DeletePostResponse)
+def delete_post(payload: DeletePostRequest) -> DeletePostResponse:
+    try:
+        success = service.delete_post(payload.post_id)
+    except service.VKAPIError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    return DeletePostResponse(success=success)
+
+
+@router.post("/upload-photo")
+async def upload_photo(file: UploadFile = File(...)):
+    """Загружает фото в VK и возвращает строку вложения (photo{owner}_{id})."""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Нужен файл изображения")
+    try:
+        file_bytes = await file.read()
+        attachment = service.upload_wall_photo(file_bytes, file.filename or "photo.jpg", file.content_type)
+    except service.VKAPIError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    return {"attachment": attachment}

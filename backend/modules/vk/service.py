@@ -1,4 +1,5 @@
 import csv
+import logging
 import re
 import time
 from datetime import datetime
@@ -9,6 +10,7 @@ import requests
 
 from backend.app.config import settings
 
+logger = logging.getLogger(__name__)
 
 _MAX_RETRIES = 5
 _RETRY_DELAY_SEC = 2
@@ -257,3 +259,81 @@ def _get_with_retries(url: str, params: dict) -> dict:
             last_err = e
             time.sleep(_RETRY_DELAY_SEC)
     raise VKAPIError(f"VK GET {url} не ответил после {_MAX_RETRIES} попыток: {last_err}")
+
+
+# ---------- Загрузка фото на стену ----------
+
+def upload_wall_photo(file_bytes: bytes, filename: str, content_type: str) -> str:
+    """
+    Загружает фото на стену сообщества VK.
+    Возвращает строку вложения вида 'photo{owner_id}_{photo_id}'.
+    Бросает VKAPIError при ошибках.
+    """
+    logger.info("upload_wall_photo: filename=%s content_type=%s size=%d", filename, content_type, len(file_bytes))
+
+    # 1. Получаем URL для загрузки
+    params = {
+        "group_id": settings.GROUP_ID,
+        "v": settings.VK_API_VERSION,
+        "access_token": settings.ACCESS_TOKEN,
+    }
+    data = _get_with_retries("https://api.vk.com/method/photos.getWallUploadServer", params)
+    logger.info("getWallUploadServer response: %s", data)
+    if "error" in data:
+        raise VKAPIError(data["error"].get("error_msg", "VK API error (getWallUploadServer)"))
+    upload_url = data["response"]["upload_url"]
+
+    # 2. Загружаем файл на сервер VK
+    try:
+        resp = requests.post(
+            upload_url,
+            files={"photo": (filename, file_bytes, content_type)},
+            timeout=30,
+        )
+        upload_result = resp.json()
+        logger.info("upload to VK server response: %s", upload_result)
+    except (requests.exceptions.RequestException, ValueError) as e:
+        logger.error("upload to VK server failed: %s", e)
+        raise VKAPIError(f"Ошибка загрузки фото на сервер VK: {e}")
+
+    if not upload_result.get("photo") or upload_result.get("photo") == "[]":
+        raise VKAPIError("VK не принял фото (пустой ответ после загрузки)")
+
+    # 3. Сохраняем фото
+    save_params = {
+        "group_id": settings.GROUP_ID,
+        "photo": upload_result["photo"],
+        "server": upload_result["server"],
+        "hash": upload_result["hash"],
+        "v": settings.VK_API_VERSION,
+        "access_token": settings.ACCESS_TOKEN,
+    }
+    save_data = _post_with_retries("https://api.vk.com/method/photos.saveWallPhoto", save_params)
+    logger.info("saveWallPhoto response: %s", save_data)
+    if "error" in save_data:
+        raise VKAPIError(save_data["error"].get("error_msg", "VK API error (saveWallPhoto)"))
+
+    photo = save_data["response"][0]
+    owner_id = photo["owner_id"]
+    photo_id = photo["id"]
+    attachment = f"photo{owner_id}_{photo_id}"
+    logger.info("upload_wall_photo success: %s", attachment)
+    return attachment
+
+# ---------- Удаление поста ----------
+
+def delete_post(post_id: int) -> bool:
+    """
+    Удаляет пост со стены сообщества. Возвращает True при успехе.
+    Бросает VKAPIError при ошибках сети / API.
+    """
+    params = {
+        "owner_id": settings.OWNER_ID,
+        "post_id": post_id,
+        "v": settings.VK_API_VERSION,
+        "access_token": settings.ACCESS_TOKEN,
+    }
+    data = _post_with_retries("https://api.vk.com/method/wall.delete", params)
+    if "error" in data:
+        raise VKAPIError(data["error"].get("error_msg", "VK API error"))
+    return bool(data.get("response", 0))

@@ -46,3 +46,18 @@ class ParsePostsResponse(BaseModel):
     domain: str
     count: int
     posts: list[ParsedPost]
+
+
+class DeletePostRequest(BaseModel):
+    post_id: int = Field(..., description="ID поста для удаления")
+
+
+class DeletePostResponse(BaseModel):
+    success: bool
+
+class DeletePostRequest(BaseModel):
+    post_id: int = Field(..., description="ID поста для удаления")
+
+
+class DeletePostResponse(BaseModel):
+    success: bool
