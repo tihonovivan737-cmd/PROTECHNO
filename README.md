@@ -1,60 +1,98 @@
-# Анализатор медиаокнтента для хакатона Протехно 2026
+﻿# PROTECHNO Media Analyzer
 
-## Backend
-Для запуска Backend пропишите в главной директории
+Веб-приложение для анализа медиаконтента и генерации материалов в рамках проекта PROTECHNO.
 
-uvicorn backend.app.main:app --reload
+Стек:
+- Backend: FastAPI, SQLAlchemy, PostgreSQL
+- Frontend: Vite + JavaScript
+- Интеграции: VK, Dzen, Google Sheets, LLM
 
-Примеры запросов/ответов
-POST /api/vk/parse
-Запрос:
+## Возможности
 
-{
-  "url": "https://vk.com/svoedelomc",
-  "max_posts": 3
-}
-Ответ:
+- Парсинг постов из VK и Dzen
+- Аналитика и проверка состояния контента
+- Генерация текста через LLM
+- Формирование отчетов
+- Профили организаций и маршрутизация сценариев
 
-{
-  "domain": "svoedelomc",
-  "count": 3,
-  "posts": [
-    {
-      "id": 12345,
-      "date": "2026-04-20T18:30:00",
-      "text": "Сегодня в МЦ прошёл квиз...",
-      "likes": 87,
-      "reposts": 3,
-      "comments": 5,
-      "views": 1240
-    }
-  ]
-}
-Ошибка некорректной ссылки → 400, ошибка VK → 502.
+## Структура проекта
 
-POST /api/llm/generate
-Запрос:
+- `backend/` - API, бизнес-логика, БД-модели
+- `frontend/` - клиентская часть (Vite)
+- `alembic/` - миграции БД
+- `start-dev.bat` - быстрый запуск dev-режима
+- `start-prod.bat` - сборка фронтенда + запуск backend в prod-режиме
 
-{ "query": "Кинопоказ под открытым небом на Татышеве в субботу" }
-Ответ:
+## Быстрый старт
 
-{
-  "text": "В субботу собираемся на Татышеве...\n\n#мцсвоедело",
-  "model": "qwen2.5:3b",
-  "shots_used": 3
-}
-POST /api/vk/poster
-Запрос:
+### 1) Подготовка окружения
 
-{
-  "message": "Тестовый пост из backend 🚀",
-  "attachments": null,
-  "from_group": true
-}
-Ответ (201):
+Требования:
+- Python 3.10+
+- Node.js 20+
+- PostgreSQL
 
+Установите зависимости backend:
 
-{
-  "post_id": 7842,
-  "url": "https://vk.com/wall-238056064_7842"
-}
+```bash
+pip install -r requirements.txt
+```
+
+Установите зависимости frontend:
+
+```bash
+cd frontend
+npm install
+```
+
+### 2) Настройка `.env`
+
+Создайте или заполните `.env` в корне проекта.
+Минимально нужны параметры подключения к БД и ключи интеграций (VK/LLM).
+
+### 3) Запуск в dev
+
+Вариант 1 (рекомендуется для Windows):
+
+```bat
+start-dev.bat
+```
+
+Вариант 2 (вручную):
+
+```bash
+# терминал 1
+python -m backend.app.main
+
+# терминал 2
+cd frontend
+npm run dev
+```
+
+По умолчанию:
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:5173`
+
+### 4) Запуск в prod
+
+```bat
+start-prod.bat
+```
+
+Скрипт собирает frontend и поднимает единый сервер FastAPI, который отдает и API, и собранный фронтенд.
+
+## Ключевые эндпоинты
+
+- `GET /health/db` - проверка доступности БД
+- `POST /api/vk/parse` - парсинг постов VK
+- `POST /api/vk/poster` - публикация поста в VK
+- `POST /api/llm/generate` - генерация текста LLM
+
+## Примечания
+
+- CORS настроен для localhost, локальной сети и временных tunnel-доменов (`trycloudflare.com`, `ngrok`).
+- Для LAN-доступа откройте порты в Windows Firewall при необходимости.
+
+## Лицензия
+
+Внутренний проект команды PROTECHNO.

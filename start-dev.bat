@@ -7,7 +7,7 @@ REM  Pro-Techno DEV - uvicorn (8000) + Vite (5173).
 REM ============================================================
 
 set "BACKEND_DIR=%~dp0"
-set "FRONTEND_DIR=D:\DS\Pro-Techno"
+set "FRONTEND_DIR=%~dp0frontend"
 
 echo.
 echo ====== Pro-Techno DEV ======
@@ -18,7 +18,8 @@ echo.
 
 REM --- 1) Python ---
 set "PYTHON_CMD="
-where python >nul 2>nul && set "PYTHON_CMD=python"
+py --version >nul 2>nul && set "PYTHON_CMD=py"
+if not defined PYTHON_CMD where python >nul 2>nul && set "PYTHON_CMD=python"
 if not defined PYTHON_CMD if defined CONDA_PREFIX if exist "%CONDA_PREFIX%\python.exe" set "PYTHON_CMD=%CONDA_PREFIX%\python.exe"
 if not defined PYTHON_CMD if exist "D:\Conda\python.exe" set "PYTHON_CMD=D:\Conda\python.exe"
 if not defined PYTHON_CMD (
